@@ -371,22 +371,21 @@ function applyNewUrl() {
 // ── MAIN POLL
 async function poll() {
   if (!S.sessionId) { showBanner(); return; }
-  const proxy = 'https://corsproxy.io/?url=';
-  const now   = Date.now();
+  const now = Date.now();
 
-  // Encode full Garmin URLs so corsproxy doesn't choke on the ? and & params
-  const sessUrl = encodeURIComponent(
-    `https://livetrack.garmin.com/services/session/${S.sessionId}/token/${S.token}?requestTime=${now}`
-  );
-  const logUrl = encodeURIComponent(
-    `https://livetrack.garmin.com/services/trackLog/${S.sessionId}/token/${S.token}?requestTime=${now}&from=${now-86400000}`
-  );
+  // allorigins wraps the response in {contents: "..."} — handles encoding cleanly
+  async function proxyFetch(url) {
+    const res = await fetch(`https://api.allorigins.win/get?url=${encodeURIComponent(url)}`);
+    if (!res.ok) throw new Error('proxy_err');
+    const wrapper = await res.json();
+    return JSON.parse(wrapper.contents);
+  }
 
   try {
     // Session status
-    const sRes = await fetch(proxy + sessUrl);
-    if (!sRes.ok) throw new Error('sess_err');
-    const sess = await sRes.json();
+    const sess = await proxyFetch(
+      `https://livetrack.garmin.com/services/session/${S.sessionId}/token/${S.token}?requestTime=${now}`
+    );
 
     console.log('SESSION RESPONSE:', JSON.stringify(sess));
 
@@ -398,11 +397,11 @@ async function poll() {
     }
 
     // Track log — last 24 hrs
-    const logRes = await fetch(proxy + logUrl);
-    if (!logRes.ok) throw new Error('log_err');
-    const log = await logRes.json();
+    const log = await proxyFetch(
+      `https://livetrack.garmin.com/services/trackLog/${S.sessionId}/token/${S.token}?requestTime=${now}&from=${now-86400000}`
+    );
 
-    console.log('TRACKLOG LENGTH:', Array.isArray(log) ? log.length : 'not an array', 'SAMPLE:', JSON.stringify(log[0]));
+    console.log('TRACKLOG LENGTH:', Array.isArray(log) ? log.length : 'not an array', 'SAMPLE:', JSON.stringify(log?.[0]));
 
     if (!Array.isArray(log) || !log.length) {
       setDot('off'); setStat('NO POINTS YET');
