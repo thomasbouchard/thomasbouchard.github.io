@@ -373,12 +373,11 @@ async function poll() {
   if (!S.sessionId) { showBanner(); return; }
   const now = Date.now();
 
-  // allorigins wraps the response in {contents: "..."} — handles encoding cleanly
+  // Personal Cloudflare worker — bypasses Garmin CORS block
   async function proxyFetch(url) {
-    const res = await fetch(`https://api.allorigins.win/get?url=${encodeURIComponent(url)}`);
+    const res = await fetch(`https://garmin.bouchard-thomas-a.workers.dev/?target=${encodeURIComponent(url)}`);
     if (!res.ok) throw new Error('proxy_err');
-    const wrapper = await res.json();
-    return JSON.parse(wrapper.contents);
+    return await res.json();
   }
 
   try {
