@@ -381,50 +381,59 @@ async function poll() {
   }
 
   try {
-    // Session status
-    const sess = await proxyFetch(
-      `https://livetrack.garmin.com/services/session/${S.sessionId}/token/${S.token}?requestTime=${now}`
-    );
-
-    console.log('SESSION RESPONSE:', JSON.stringify(sess));
-
-    if (sess.sessionStatus === 'Expired' || sess.cancelled) {
-      setDot('exp'); setStat('SESSION EXPIRED');
-      showBanner();
-      setOverlay('Session Expired', 'Ask the crew to restart LiveTrack and send you the new link.');
-      return;
-    }
-
-    // Track log — last 24 hrs
+    // NEW Garmin API endpoint — fetch track points from last 24hrs
+    const begin = new Date(now - 86400000).toISOString();
     const log = await proxyFetch(
-      `https://livetrack.garmin.com/services/trackLog/${S.sessionId}/token/${S.token}?requestTime=${now}&from=${now-86400000}`
+      `https://livetrack.garmin.com/api/sessions/${S.sessionId}/track-points/common?token=${S.token}&begin=${encodeURIComponent(begin)}`
     );
 
-    console.log('TRACKLOG LENGTH:', Array.isArray(log) ? log.length : 'not an array', 'SAMPLE:', JSON.stringify(log?.[0]));
+    console.log('TRACKLOG RESPONSE:', JSON.stringify(log).slice(0, 300));
 
-    if (!Array.isArray(log) || !log.length) {
+    // New API returns {trackPoints: [...]} or similar — handle both
+    const points = Array.isArray(log) ? log
+                 : Array.isArray(log?.trackPoints) ? log.trackPoints
+                 : Array.isArray(log?.data) ? log.data
+                 : null;
+
+    if (!points || !points.length) {
       setDot('off'); setStat('NO POINTS YET');
       setOverlay('Session Active', 'Waiting for first position fix from device.');
       return;
     }
 
+    // Normalize points — new API may use different field names
+    const normalize = p => ({
+      latitude:  p.latitude  ?? p.lat ?? p.latLng?.lat,
+      longitude: p.longitude ?? p.lon ?? p.lng ?? p.latLng?.lng,
+      timestamp: p.timestamp ?? p.dateTime ?? p.time ?? Date.now(),
+      metaData:  p.metaData  ?? p.metadata ?? {},
+      speed:     p.speed     ?? p.metaData?.SPEED ?? p.metadata?.speed ?? 0,
+      heading:   p.heading   ?? p.course ?? p.metaData?.HEADING ?? p.metaData?.COURSE ?? 0,
+      elevation: p.elevation ?? p.altitude ?? p.metaData?.ELEVATION ?? 0,
+    });
+
+    const normalized = points.map(normalize).filter(p => p.latitude && p.longitude);
+    if (!normalized.length) {
+      setDot('off'); setStat('NO VALID POINTS');
+      return;
+    }
+
     // Merge new points
     const existing = new Set(S.trackPoints.map(p => p.timestamp));
-    log.forEach(p => { if (!existing.has(p.timestamp) && p.latitude && p.longitude) S.trackPoints.push(p); });
+    normalized.forEach(p => { if (!existing.has(p.timestamp)) S.trackPoints.push(p); });
     S.trackPoints.sort((a,b) => a.timestamp - b.timestamp);
 
     const latest = S.trackPoints[S.trackPoints.length - 1];
-    const m = latest.metaData || {};
     const pos = {
       lat: latest.latitude,
       lon: latest.longitude,
-      sog: mpsKn(parseFloat(m.SPEED || 0)),
-      cog: parseFloat(m.HEADING || m.COURSE || 0),
-      alt: parseFloat(m.ELEVATION || 0),
+      sog: mpsKn(parseFloat(latest.speed || 0)),
+      cog: parseFloat(latest.heading || 0),
+      alt: parseFloat(latest.elevation || 0),
       ts:  latest.timestamp,
     };
 
-    applyPos(pos, sess);
+    applyPos(pos, null);
     setDot('live'); setStat('LIVE');
     hideBanner();
     document.getElementById('lupd').textContent = 'Updated ' + new Date().toLocaleTimeString();
@@ -567,8 +576,10 @@ function hvNM(la1,lo1,la2,lo2){
 }
 function distTotal(){
   let d=0;
-  for(let i=1;i<S.trackPoints.length;i++)
-    d+=hvNM(S.trackPoints[i-1].latitude,S.trackPoints[i-1].longitude,S.trackPoints[i].latitude,S.trackPoints[i].longitude);
+  for(let i=1;i<S.trackPoints.length;i++){
+    const a=S.trackPoints[i-1], b=S.trackPoints[i];
+    d+=hvNM(a.latitude,a.longitude,b.latitude,b.longitude);
+  }
   return d;
 }
 function distToday(){
