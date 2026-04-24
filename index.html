@@ -382,18 +382,16 @@ async function poll() {
 
   try {
     // NEW Garmin API endpoint — fetch track points from last 24hrs
-    const begin = new Date(now - 86400000).toISOString();
-    const log = await proxyFetch(
-      `https://livetrack.garmin.com/api/sessions/${S.sessionId}/track-points/common?token=${S.token}&begin=${encodeURIComponent(begin)}`
-    );
+    // Ask from trip start so we get the full voyage track
+    const begin = new Date(CONFIG.tripStartDate).toISOString();
+    // Do NOT encode begin — the proxyFetch encodes the whole URL once
+    const garminUrl = `https://livetrack.garmin.com/api/sessions/${S.sessionId}/track-points/common?token=${S.token}&begin=${begin}`;
+    const log = await proxyFetch(garminUrl);
 
     console.log('TRACKLOG RESPONSE:', JSON.stringify(log).slice(0, 300));
 
-    // New API returns {trackPoints: [...]} or similar — handle both
-    const points = Array.isArray(log) ? log
-                 : Array.isArray(log?.trackPoints) ? log.trackPoints
-                 : Array.isArray(log?.data) ? log.data
-                 : null;
+    // New Garmin API returns {trackPoints: [...]}
+    const points = log?.trackPoints ?? [];
 
     if (!points || !points.length) {
       setDot('off'); setStat('NO POINTS YET');
@@ -612,3 +610,4 @@ function refreshAll(){poll()}
 </script>
 </body>
 </html>
+
