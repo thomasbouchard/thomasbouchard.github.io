@@ -3,1004 +3,591 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>S/V Cannonball Tracker</title>
+<title>S/V Voyage Tracker</title>
 
 <!-- ============================================================
-     PLUG-AND-PLAY CONFIGURATION — edit this section only
+     CONFIGURATION — edit this section to customize
      ============================================================ -->
 <script>
 const CONFIG = {
 
   // ── Vessel info ──────────────────────────────────────────────
-  vesselName: "S/V Cannonball",
-  crew: ["Paul Cannon", "Sarah Cannon", "Captain Captain"],   // add/remove names
+  vesselName: "S/V Voyage Tracker",
+  crew: ["Crew Member 1", "Crew Member 2"],
 
-  // ── Garmin inReach MapShare ───────────────────────────────────
-  // 1. On device or Garmin Explore: enable MapShare
-  // 2. Paste the MapShare feed URL below (KML format)
-  // Example: "https://share.garmin.com/Feed/Share/YourMapShareKey"
-  mapShareUrl: null,   // ← PASTE YOUR MAPSHARE URL HERE
+  // ── Garmin LiveTrack ─────────────────────────────────────────
+  // Paste the full LiveTrack URL here.
+  // Format: https://livetrack.garmin.com/session/{id}/token/{token}
+  // ⚠ This expires every 24 hrs — update it each day when crew
+  //   restarts tracking. The page also has a banner to paste a new
+  //   link without editing this file.
+  liveTrackUrl: "https://livetrack.garmin.com/session/38d75bb3-2dd1-89ad-bf4a-a0a7aa564101/token/33B4FE4D29F21590F1F335D4B6B77B8F",
 
-  // How often to refresh position (milliseconds). 600000 = 10 min
-  refreshInterval: 600000,
+  // Poll interval in ms (120000 = 2 min)
+  refreshInterval: 120000,
 
   // ── Trip metadata ─────────────────────────────────────────────
-  tripStartDate: "2025-04-10",   // ← set departure date (YYYY-MM-DD)
-  originName: "Cayo Quemado, Guatemala",
-  destinationName: "Youngstown Yacht Club, NY",
+  tripStartDate:   "2025-04-21",   // YYYY-MM-DD
+  originName:      "Puerto Barrios, Guatemala",
+  destinationName: "Buffalo, NY",
+  totalTripNM:     2800,           // approx total route distance
 
-  // Total great-circle trip distance in nautical miles (approx)
-  // Guatemala east coast → Buffalo via Caribbean + East Coast + Erie Canal
-  totalTripNM: 2800,   // ← adjust to your planned route distance
-
-  // ── Waypoints ────────────────────────────────────────────────
-  // Add stops as you learn them. Order matters (start → finish).
-  // lat/lon in decimal degrees. etaLabel is optional.
+  // ── Waypoints ─────────────────────────────────────────────────
+  // Add / uncomment stops as plans solidify. Order: start → finish.
   waypoints: [
-    { name: "Cayo Quemado, Guatemala", lat: 15.759303, lon: -88.839134, type: "origin" },
-    // ── ADD STOPS BELOW ──────────────────────────────────────
-     { name: "Key West, FL",           lat: 24.5551, lon: -81.7800, type: "stop", etaLabel: "~Day ?" },
-     { name: "Fort Lauderdale",           lat: 26.10567, lon: -80.12678, type: "stop", etaLabel: "~Day ?" },
-    // { name: "Key West, FL",           lat: 24.5551, lon: -81.7800, type: "stop", etaLabel: "~Day 10" },
-    // { name: "Charleston, SC",         lat: 32.7765, lon: -79.9311, type: "stop", etaLabel: "~Day 18" },
-    // { name: "Norfolk, VA",            lat: 36.8468, lon: -76.2951, type: "stop", etaLabel: "~Day 22" },
-    // { name: "Atlantic City, NJ",      lat: 39.3643, lon: -74.4229, type: "stop", etaLabel: "~Day 27" },
-    // { name: "New York City, NY",      lat: 40.6892, lon: -74.0445, type: "stop", etaLabel: "~Day 29" },
-    // { name: "Albany, NY (Erie Canal)",lat: 42.6526, lon: -73.7562, type: "stop", etaLabel: "~Day 35" },
-    // { name: "Oswego, NY",             lat: 43.4553, lon: -76.5105, type: "stop", etaLabel: "~Day 40" },
-    { name: "Youngstown, NY",              lat: 42.8864, lon: -78.8784, type: "destination" },
+    { name: "Puerto Barrios, Guatemala", lat: 15.7167, lon: -88.5833, type: "origin" },
+    // { name: "Utila, Honduras",         lat: 16.0997, lon: -86.9036, type: "stop", etaLabel: "~Day 2" },
+    // { name: "Grand Cayman",            lat: 19.3133, lon: -81.2546, type: "stop", etaLabel: "~Day 5" },
+    // { name: "Key West, FL",            lat: 24.5551, lon: -81.7800, type: "stop", etaLabel: "~Day 10" },
+    // { name: "Charleston, SC",          lat: 32.7765, lon: -79.9311, type: "stop", etaLabel: "~Day 18" },
+    // { name: "Norfolk, VA",             lat: 36.8468, lon: -76.2951, type: "stop", etaLabel: "~Day 22" },
+    // { name: "New York City, NY",       lat: 40.6892, lon: -74.0445, type: "stop", etaLabel: "~Day 29" },
+    // { name: "Albany, NY (Erie Canal)", lat: 42.6526, lon: -73.7562, type: "stop", etaLabel: "~Day 35" },
+    // { name: "Oswego, NY",              lat: 43.4553, lon: -76.5105, type: "stop", etaLabel: "~Day 40" },
+    { name: "Buffalo, NY",               lat: 42.8864, lon: -78.8784, type: "destination" },
   ],
 
-  // ── Windy embed ───────────────────────────────────────────────
-  // Windy shows wind/weather overlays on the map.
-  // Default center lat/lon (shown before first position fix)
-  windyDefaultLat: 17.5,
-  windyDefaultLon: -80.0,
-  windyDefaultZoom: 5,
-
-  // ── Open-Meteo Marine weather ─────────────────────────────────
-  // Fetched at vessel position automatically. No key needed.
   enableWeather: true,
 };
 </script>
-<!-- ============================================================
-     END CONFIGURATION
-     ============================================================ -->
+<!-- ============================================================ -->
 
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;800&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
 
 <style>
-  :root {
-    --navy:    #0a1628;
-    --navy2:   #112040;
-    --blue:    #1a3a6e;
-    --accent:  #a8a29e;
-    --accent2: #d6d3d1;
-    --teal:    #1fc9a0;
-    --tealD:   #15a07e;
-    --muted:   #4a6080;
-    --text:    #D3D3D3;
-    --textD:   #8aaace;
-    --card:    rgba(17,32,64,0.85);
-    --border:  rgba(232,184,75,0.2);
-    --radius:  12px;
-    --mono:    'Space Mono', monospace;
-    --display: 'DM Sans', sans-serif;
-  }
+:root {
+  --navy:   #0a1628;
+  --navy2:  #112040;
+  --accent: #e8b84b;
+  --teal:   #1fc9a0;
+  --muted:  #4a6080;
+  --text:   #d8e8f8;
+  --textD:  #8aaace;
+  --warn:   #e87a4b;
+  --card:   rgba(17,32,64,0.85);
+  --border: rgba(232,184,75,0.2);
+  --r:      12px;
+  --mono:   'Space Mono', monospace;
+  --sans:   'Syne', sans-serif;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:var(--navy);color:var(--text);font-family:var(--sans);min-height:100vh;overflow-x:hidden}
+body::before{content:'';position:fixed;inset:0;z-index:0;pointer-events:none;
+  background-image:
+    radial-gradient(1px 1px at 12% 22%,rgba(255,255,255,.4) 0%,transparent 100%),
+    radial-gradient(1px 1px at 33% 62%,rgba(255,255,255,.3) 0%,transparent 100%),
+    radial-gradient(1px 1px at 71% 14%,rgba(255,255,255,.35) 0%,transparent 100%),
+    radial-gradient(1px 1px at 87% 76%,rgba(255,255,255,.25) 0%,transparent 100%),
+    radial-gradient(600px 400px at 20% 80%,rgba(26,58,110,.6) 0%,transparent 70%),
+    radial-gradient(400px 300px at 80% 10%,rgba(26,58,110,.4) 0%,transparent 70%)}
+.wrap{position:relative;z-index:1;max-width:1400px;margin:0 auto;padding:0 20px 40px}
 
-  * { box-sizing: border-box; margin: 0; padding: 0; }
+/* header */
+header{display:flex;align-items:flex-end;justify-content:space-between;padding:28px 0 20px;border-bottom:1px solid var(--border);flex-wrap:wrap;gap:12px}
+.vname{font-size:clamp(22px,4vw,38px);font-weight:800;letter-spacing:-.02em;color:var(--accent);text-shadow:0 0 40px rgba(232,184,75,.3)}
+.rlabel{font-size:13px;color:var(--textD);font-family:var(--mono);letter-spacing:.05em}
+.hdr-right{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.sbadge{display:flex;align-items:center;gap:8px;background:var(--card);border:1px solid var(--border);border-radius:100px;padding:6px 16px;font-size:12px;font-family:var(--mono);color:var(--textD)}
+.sdot{width:8px;height:8px;border-radius:50%;background:var(--teal);animation:pulse 2s infinite}
+.sdot.off{background:var(--muted);animation:none}
+.sdot.exp{background:var(--warn);animation:none}
+@keyframes pulse{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.5;transform:scale(1.3)}}
 
-  body {
-    background: var(--navy);
-    color: var(--text);
-    font-family: var(--display);
-    min-height: 100vh;
-    overflow-x: hidden;
-  }
+/* livetrack update banner */
+.lt-banner{display:none;margin:14px 0 0;background:rgba(232,122,75,.1);border:1px solid rgba(232,122,75,.35);border-radius:var(--r);padding:14px 18px;gap:10px;align-items:center;flex-wrap:wrap}
+.lt-banner.on{display:flex}
+.lt-msg{font-size:12px;font-family:var(--mono);color:#f0a070;flex:1;min-width:200px}
+.lt-inp{flex:2;min-width:240px;background:rgba(10,22,40,.8);border:1px solid rgba(232,122,75,.4);border-radius:8px;color:var(--text);font-family:var(--mono);font-size:11px;padding:7px 12px;outline:none}
+.lt-inp:focus{border-color:var(--accent)}
+.lt-btn{background:transparent;border:1px solid var(--accent);border-radius:8px;color:var(--accent);font-family:var(--mono);font-size:11px;padding:7px 14px;cursor:pointer;white-space:nowrap;transition:background .2s}
+.lt-btn:hover{background:rgba(232,184,75,.12)}
 
-  /* ── starfield bg ── */
-  body::before {
-    content: '';
-    position: fixed; inset: 0; z-index: 0;
-    background-image:
-      radial-gradient(1px 1px at 10% 20%, rgba(255,255,255,0.4) 0%, transparent 100%),
-      radial-gradient(1px 1px at 30% 60%, rgba(255,255,255,0.3) 0%, transparent 100%),
-      radial-gradient(1px 1px at 70% 15%, rgba(255,255,255,0.35) 0%, transparent 100%),
-      radial-gradient(1px 1px at 85% 75%, rgba(255,255,255,0.25) 0%, transparent 100%),
-      radial-gradient(1px 1px at 50% 90%, rgba(255,255,255,0.3) 0%, transparent 100%),
-      radial-gradient(600px 400px at 20% 80%, rgba(26,58,110,0.6) 0%, transparent 70%),
-      radial-gradient(400px 300px at 80% 10%, rgba(26,58,110,0.4) 0%, transparent 70%);
-    pointer-events: none;
-  }
+/* progress */
+.prog-sec{margin:16px 0;background:var(--card);border:1px solid var(--border);border-radius:var(--r);padding:18px 22px}
+.prog-hdr{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:10px}
+.prog-lbl{font-size:11px;font-family:var(--mono);color:var(--textD);letter-spacing:.08em}
+.prog-pct{font-size:22px;font-weight:800;color:var(--accent)}
+.prog-track{height:8px;background:var(--navy);border-radius:100px;overflow:hidden}
+.prog-fill{height:100%;border-radius:100px;background:linear-gradient(90deg,var(--teal),var(--accent));transition:width 1s ease;width:0%}
+.prog-ticks{position:relative;height:22px;margin-top:6px}
+.tick{position:absolute;transform:translateX(-50%);font-size:9px;font-family:var(--mono);color:var(--muted);text-align:center;white-space:nowrap}
+.tick::before{content:'|';display:block;font-size:8px;color:var(--border);margin-bottom:2px}
+.tick.done{color:var(--teal)}
 
-  /* ── layout ── */
-  .wrapper { position: relative; z-index: 1; max-width: 1400px; margin: 0 auto; padding: 0 20px 40px; }
+/* stats */
+.sgrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(148px,1fr));gap:12px;margin:16px 0}
+.scard{background:var(--card);border:1px solid var(--border);border-radius:var(--r);padding:16px 18px}
+.scard.hi{border-color:rgba(31,201,160,.3)}
+.scard.hi .sval{color:var(--teal)}
+.slbl{font-size:10px;font-family:var(--mono);color:var(--textD);letter-spacing:.1em;margin-bottom:6px}
+.sval{font-size:26px;font-weight:800;color:var(--accent);line-height:1}
+.sunit{font-size:11px;font-family:var(--mono);color:var(--muted);margin-top:2px}
 
-  /* ── header ── */
-  header {
-    display: flex; align-items: flex-end; justify-content: space-between;
-    padding: 28px 0 20px;
-    border-bottom: 1px solid var(--border);
-    flex-wrap: wrap; gap: 12px;
-  }
-  .vessel-name {
-    font-size: clamp(22px, 4vw, 38px);
-    font-weight: 800;
-    letter-spacing: -0.02em;
-    color: var(--accent);
-    text-shadow: 0 0 40px rgba(232,184,75,0.3);
-  }
-  .route-label {
-    font-size: 13px;
-    color: var(--textD);
-    font-family: var(--mono);
-    letter-spacing: 0.05em;
-  }
-  .status-badge {
-    display: flex; align-items: center; gap: 8px;
-    background: var(--card);
-    border: 1px solid var(--border);
-    border-radius: 100px;
-    padding: 6px 16px;
-    font-size: 12px;
-    font-family: var(--mono);
-    color: var(--textD);
-  }
-  .status-dot {
-    width: 8px; height: 8px;
-    border-radius: 50%;
-    background: var(--teal);
-    animation: pulse 2s infinite;
-  }
-  .status-dot.offline { background: var(--muted); animation: none; }
-  @keyframes pulse {
-    0%,100% { opacity: 1; transform: scale(1); }
-    50%      { opacity: 0.5; transform: scale(1.3); }
-  }
+/* main grid */
+.main{display:grid;grid-template-columns:1fr 320px;gap:16px;margin-top:16px}
+@media(max-width:900px){.main{grid-template-columns:1fr}}
 
-  /* ── progress bar ── */
-  .progress-section {
-    margin: 20px 0;
-    background: var(--card);
-    border: 1px solid var(--border);
-    border-radius: var(--radius);
-    padding: 18px 22px;
-  }
-  .progress-header {
-    display: flex; justify-content: space-between; align-items: baseline;
-    margin-bottom: 10px;
-  }
-  .progress-label { font-size: 11px; font-family: var(--mono); color: var(--textD); letter-spacing: 0.08em; }
-  .progress-pct { font-size: 22px; font-weight: 800; color: var(--accent); }
-  .progress-track {
-    height: 8px;
-    background: var(--navy);
-    border-radius: 100px;
-    overflow: hidden;
-    position: relative;
-  }
-  .progress-fill {
-    height: 100%;
-    border-radius: 100px;
-    background: linear-gradient(90deg, var(--teal), var(--accent));
-    transition: width 1s ease;
-    width: 0%;
-  }
-  /* waypoint ticks */
-  .progress-ticks { position: relative; height: 20px; margin-top: 6px; }
-  .tick {
-    position: absolute;
-    transform: translateX(-50%);
-    font-size: 9px;
-    font-family: var(--mono);
-    color: var(--muted);
-    text-align: center;
-    white-space: nowrap;
-  }
-  .tick::before {
-    content: '|';
-    display: block;
-    font-size: 8px;
-    color: var(--border);
-    margin-bottom: 2px;
-  }
-  .tick.reached { color: var(--teal); }
-  .tick.next-stop { color: var(--accent); }
+/* map */
+.mwrap{background:var(--card);border:1px solid var(--border);border-radius:var(--r);overflow:hidden;position:relative;min-height:480px}
+#windy{width:100%;height:100%;min-height:480px;border:none;display:block}
+.mlabel{position:absolute;top:12px;left:12px;background:rgba(10,22,40,.85);border:1px solid var(--border);border-radius:8px;padding:6px 12px;font-size:11px;font-family:var(--mono);color:var(--accent);pointer-events:none;z-index:10}
+.moverlay{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;background:rgba(10,22,40,.75);z-index:20;gap:10px;text-align:center;padding:20px}
+.moverlay .ico{font-size:40px;margin-bottom:8px}
+.moverlay h3{font-size:18px;color:var(--accent)}
+.moverlay p{font-size:12px;color:var(--textD);font-family:var(--mono);max-width:280px;line-height:1.6}
 
-  /* ── stats grid ── */
-  .stats-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
-    gap: 12px;
-    margin: 16px 0;
-  }
-  .stat-card {
-    background: var(--card);
-    border: 1px solid var(--border);
-    border-radius: var(--radius);
-    padding: 16px 18px;
-  }
-  .stat-label {
-    font-size: 10px;
-    font-family: var(--mono);
-    color: var(--textD);
-    letter-spacing: 0.1em;
-    margin-bottom: 6px;
-  }
-  .stat-value {
-    font-size: 26px;
-    font-weight: 800;
-    color: var(--accent);
-    line-height: 1;
-  }
-  .stat-unit {
-    font-size: 11px;
-    font-family: var(--mono);
-    color: var(--muted);
-    margin-top: 2px;
-  }
-  .stat-card.highlight { border-color: rgba(31,201,160,0.3); }
-  .stat-card.highlight .stat-value { color: var(--teal); }
+/* sidebar */
+.sidebar{display:flex;flex-direction:column;gap:14px}
+.card{background:var(--card);border:1px solid var(--border);border-radius:var(--r);padding:18px}
+.ctitle{font-size:10px;font-family:var(--mono);color:var(--textD);letter-spacing:.12em;margin-bottom:14px;padding-bottom:10px;border-bottom:1px solid var(--border)}
 
-  /* ── main content: map + sidebar ── */
-  .main-content {
-    display: grid;
-    grid-template-columns: 1fr 320px;
-    gap: 16px;
-    margin-top: 16px;
-  }
-  @media (max-width: 900px) {
-    .main-content { grid-template-columns: 1fr; }
-  }
+/* weather */
+.wxgrid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.wxlbl{font-size:10px;font-family:var(--mono);color:var(--muted)}
+.wxval{font-size:18px;font-weight:600;color:var(--text);margin-top:2px}
+.wxunit{font-size:10px;color:var(--muted);margin-left:3px}
+.wrow{display:flex;align-items:center;gap:10px;margin-top:12px;padding-top:12px;border-top:1px solid var(--border)}
+.wcircle{width:40px;height:40px;border:1px solid var(--border);border-radius:50%;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.warrow{width:0;height:0;border-left:6px solid transparent;border-right:6px solid transparent;border-bottom:18px solid var(--teal);transform-origin:50% 75%;transition:transform 1s ease}
+.twabadge{display:inline-block;padding:3px 10px;border-radius:100px;font-size:11px;font-family:var(--mono);margin-top:4px}
+.twabadge.up{background:rgba(31,201,160,.15);color:var(--teal);border:1px solid rgba(31,201,160,.3)}
+.twabadge.re{background:rgba(232,184,75,.15);color:var(--accent);border:1px solid rgba(232,184,75,.3)}
+.twabadge.dn{background:rgba(74,96,128,.3);color:var(--textD);border:1px solid rgba(74,96,128,.4)}
 
-  /* ── map ── */
-  .map-container {
-    background: var(--card);
-    border: 1px solid var(--border);
-    border-radius: var(--radius);
-    overflow: hidden;
-    position: relative;
-    min-height: 480px;
-  }
-  #windy-embed { width: 100%; height: 100%; min-height: 480px; border: none; }
+/* waypoints */
+.wplist{display:flex;flex-direction:column}
+.wpi{display:flex;align-items:flex-start;gap:12px;padding:10px 0;border-bottom:1px solid rgba(255,255,255,.04);font-size:13px}
+.wpi:last-child{border-bottom:none}
+.wpdots{display:flex;flex-direction:column;align-items:center;padding-top:4px}
+.wpdot{width:10px;height:10px;border-radius:50%;border:2px solid var(--muted);background:transparent;flex-shrink:0}
+.wpdot.ok,.wpdot.org{background:var(--teal);border-color:var(--teal)}
+.wpdot.nxt,.wpdot.dst{background:var(--accent);border-color:var(--accent)}
+.wpline{width:1px;flex:1;min-height:14px;background:var(--border);margin-top:3px}
+.wpname{color:var(--text);font-weight:600}
+.wpname.dim{color:var(--muted);font-weight:400}
+.wpname.ok{color:var(--teal)}
+.wpname.nxt{color:var(--accent)}
+.wpmeta{font-size:10px;font-family:var(--mono);color:var(--muted);margin-top:2px}
 
-  .map-overlay-label {
-    position: absolute;
-    top: 12px; left: 12px;
-    background: rgba(10,22,40,0.85);
-    border: 1px solid var(--border);
-    border-radius: 8px;
-    padding: 6px 12px;
-    font-size: 11px;
-    font-family: var(--mono);
-    color: var(--accent);
-    pointer-events: none;
-    z-index: 10;
-  }
+/* position */
+.prows{font-family:var(--mono)}
+.prow{display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid var(--border);font-size:12px}
+.prow:last-child{border-bottom:none}
+.pk{color:var(--muted);font-size:10px;align-self:center}
+.pv{color:var(--text);font-size:13px;font-weight:700}
 
-  .map-no-gps {
-    position: absolute; inset: 0;
-    display: flex; flex-direction: column;
-    align-items: center; justify-content: center;
-    background: rgba(10,22,40,0.7);
-    z-index: 20;
-    gap: 10px;
-    text-align: center;
-    padding: 20px;
-  }
-  .map-no-gps .icon { font-size: 40px; margin-bottom: 8px; }
-  .map-no-gps h3 { font-size: 18px; color: var(--accent); }
-  .map-no-gps p  { font-size: 12px; color: var(--textD); font-family: var(--mono); max-width: 260px; line-height: 1.6; }
+/* compass */
+.cmpwrap{display:flex;align-items:center;gap:14px;padding:12px 0 0}
+.cmp{width:52px;height:52px;border-radius:50%;border:1.5px solid var(--border);position:relative;flex-shrink:0}
+.cneedle{position:absolute;top:50%;left:50%;width:2px;height:20px;margin-left:-1px;margin-top:-18px;background:linear-gradient(to bottom,var(--teal) 50%,var(--muted) 50%);transform-origin:50% 100%;transition:transform 1s ease;border-radius:2px}
+.ccenter{position:absolute;top:50%;left:50%;width:6px;height:6px;border-radius:50%;background:var(--accent);transform:translate(-50%,-50%)}
+.clabels{display:grid;grid-template-columns:1fr 1fr;gap:4px;font-family:var(--mono)}
+.ck{color:var(--muted);font-size:10px}
+.cv{color:var(--text);font-weight:700;font-size:15px}
+.sessstrip{font-size:11px;font-family:var(--mono);color:var(--muted);padding:8px 0 0}
+.sessstrip span{color:var(--textD)}
 
-  /* ── sidebar ── */
-  .sidebar { display: flex; flex-direction: column; gap: 14px; }
-
-  .card {
-    background: var(--card);
-    border: 1px solid var(--border);
-    border-radius: var(--radius);
-    padding: 18px;
-  }
-  .card-title {
-    font-size: 10px;
-    font-family: var(--mono);
-    color: var(--textD);
-    letter-spacing: 0.12em;
-    margin-bottom: 14px;
-    padding-bottom: 10px;
-    border-bottom: 1px solid var(--border);
-  }
-
-  /* weather card */
-  .weather-row {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 10px;
-  }
-  .weather-item .wlabel { font-size: 10px; font-family: var(--mono); color: var(--muted); }
-  .weather-item .wval   { font-size: 18px; font-weight: 600; color: var(--text); margin-top: 2px; }
-  .weather-item .wunit  { font-size: 10px; color: var(--muted); margin-left: 3px; }
-
-  /* wind arrow */
-  .wind-direction-display {
-    display: flex; align-items: center; gap: 10px; margin-top: 12px;
-    padding-top: 12px; border-top: 1px solid var(--border);
-  }
-  .wind-arrow-wrap {
-    width: 40px; height: 40px;
-    border: 1px solid var(--border);
-    border-radius: 50%;
-    display: flex; align-items: center; justify-content: center;
-    flex-shrink: 0;
-  }
-  .wind-arrow {
-    width: 0; height: 0;
-    border-left: 6px solid transparent;
-    border-right: 6px solid transparent;
-    border-bottom: 18px solid var(--teal);
-    transform-origin: 50% 75%;
-    transition: transform 1s ease;
-  }
-  .twa-badge {
-    display: inline-block;
-    padding: 3px 10px;
-    border-radius: 100px;
-    font-size: 11px;
-    font-family: var(--mono);
-    margin-top: 4px;
-  }
-  .twa-upwind   { background: rgba(31,201,160,0.15); color: var(--teal); border: 1px solid rgba(31,201,160,0.3); }
-  .twa-reach    { background: rgba(232,184,75,0.15);  color: var(--accent); border: 1px solid rgba(232,184,75,0.3); }
-  .twa-downwind { background: rgba(74,96,128,0.3);    color: var(--textD); border: 1px solid rgba(74,96,128,0.4); }
-
-  /* waypoints list */
-  .waypoint-list { display: flex; flex-direction: column; gap: 0; }
-  .waypoint-item {
-    display: flex; align-items: flex-start; gap: 12px;
-    padding: 10px 0;
-    border-bottom: 1px solid rgba(255,255,255,0.04);
-    font-size: 13px;
-  }
-  .waypoint-item:last-child { border-bottom: none; }
-  .wp-dot-col { display: flex; flex-direction: column; align-items: center; padding-top: 4px; }
-  .wp-dot {
-    width: 10px; height: 10px;
-    border-radius: 50%;
-    border: 2px solid var(--muted);
-    background: transparent;
-    flex-shrink: 0;
-  }
-  .wp-dot.reached    { background: var(--teal);   border-color: var(--teal); }
-  .wp-dot.next-stop  { background: var(--accent);  border-color: var(--accent); }
-  .wp-dot.origin     { background: var(--teal);   border-color: var(--teal); }
-  .wp-dot.destination{ background: var(--accent);  border-color: var(--accent); }
-  .wp-line {
-    width: 1px; flex: 1; min-height: 14px;
-    background: var(--border);
-    margin-top: 3px;
-  }
-  .wp-info { flex: 1; }
-  .wp-name { color: var(--text); font-weight: 600; line-height: 1.3; }
-  .wp-name.muted { color: var(--muted); font-weight: 400; }
-  .wp-name.reached { color: var(--teal); }
-  .wp-name.next-stop { color: var(--accent); }
-  .wp-meta { font-size: 10px; font-family: var(--mono); color: var(--muted); margin-top: 2px; }
-
-  /* position card */
-  .pos-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; font-family: var(--mono); font-size: 12px; }
-  .pos-row { padding: 6px 0; border-bottom: 1px solid var(--border); }
-  .pos-row:last-child { border-bottom: none; }
-  .pos-key { color: var(--muted); font-size: 10px; }
-  .pos-val { color: var(--text); font-size: 13px; font-weight: 700; margin-top: 2px; }
-
-  /* ── footer ── */
-  footer {
-    margin-top: 28px;
-    padding-top: 16px;
-    border-top: 1px solid var(--border);
-    display: flex; justify-content: space-between; align-items: center;
-    flex-wrap: wrap; gap: 8px;
-  }
-  footer .f-label { font-size: 11px; font-family: var(--mono); color: var(--muted); }
-  #last-updated { font-size: 11px; font-family: var(--mono); color: var(--textD); }
-
-  /* ── placeholders ── */
-  .placeholder { color: var(--muted); font-style: italic; }
-
-  /* ── compass ── */
-  .compass-wrap {
-    display: flex; align-items: center; gap: 14px;
-    padding: 10px 0;
-  }
-  .compass {
-    width: 52px; height: 52px;
-    border-radius: 50%;
-    border: 1.5px solid var(--border);
-    position: relative;
-    flex-shrink: 0;
-  }
-  .compass-needle {
-    position: absolute;
-    top: 50%; left: 50%;
-    width: 2px; height: 20px;
-    margin-left: -1px; margin-top: -18px;
-    background: linear-gradient(to bottom, var(--teal) 50%, var(--muted) 50%);
-    transform-origin: 50% 100%;
-    transition: transform 1s ease;
-    border-radius: 2px;
-  }
-  .compass-center {
-    position: absolute;
-    top: 50%; left: 50%;
-    width: 6px; height: 6px;
-    border-radius: 50%;
-    background: var(--accent);
-    transform: translate(-50%, -50%);
-  }
-  .compass-labels {
-    display: grid; grid-template-columns: 1fr 1fr; gap: 4px;
-    font-size: 11px; font-family: var(--mono);
-  }
-  .cog-label { color: var(--muted); font-size: 10px; }
-  .cog-val   { color: var(--text); font-weight: 700; font-size: 15px; }
-
-  .refresh-btn {
-    background: transparent;
-    border: 1px solid var(--border);
-    border-radius: 8px;
-    color: var(--textD);
-    font-family: var(--mono);
-    font-size: 11px;
-    padding: 5px 12px;
-    cursor: pointer;
-    transition: border-color 0.2s, color 0.2s;
-  }
-  .refresh-btn:hover { border-color: var(--accent); color: var(--accent); }
+.btn{background:transparent;border:1px solid var(--border);border-radius:8px;color:var(--textD);font-family:var(--mono);font-size:11px;padding:5px 12px;cursor:pointer;transition:border-color .2s,color .2s}
+.btn:hover{border-color:var(--accent);color:var(--accent)}
+footer{margin-top:28px;padding-top:16px;border-top:1px solid var(--border);display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px}
+.flbl{font-size:11px;font-family:var(--mono);color:var(--muted)}
 </style>
 </head>
 <body>
-<div class="wrapper">
+<div class="wrap">
 
-  <!-- HEADER -->
   <header>
     <div>
-      <div class="vessel-name" id="vessel-name-display"></div>
-      <div class="route-label" id="route-label"></div>
+      <div class="vname" id="vname"></div>
+      <div class="rlabel" id="rlbl"></div>
     </div>
-    <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;">
-      <div class="status-badge">
-        <div class="status-dot offline" id="status-dot"></div>
-        <span id="status-text">Awaiting fix</span>
+    <div class="hdr-right">
+      <div class="sbadge">
+        <div class="sdot off" id="sdot"></div>
+        <span id="stxt">Connecting…</span>
       </div>
-      <button class="refresh-btn" onclick="refreshAll()">↻ Refresh</button>
+      <button class="btn" onclick="refreshAll()">↻ Refresh</button>
     </div>
   </header>
 
-  <!-- PROGRESS BAR -->
-  <div class="progress-section">
-    <div class="progress-header">
-      <span class="progress-label">OVERALL VOYAGE PROGRESS</span>
-      <span class="progress-pct"><span id="progress-pct">0</span>%</span>
+  <!-- daily link update banner -->
+  <div class="lt-banner" id="lt-banner">
+    <div class="lt-msg">⚠ LiveTrack session expired — paste today's new link from the crew:</div>
+    <input class="lt-inp" id="lt-inp" type="text" placeholder="https://livetrack.garmin.com/session/…/token/…">
+    <button class="lt-btn" onclick="applyNewUrl()">Update →</button>
+  </div>
+
+  <!-- progress -->
+  <div class="prog-sec">
+    <div class="prog-hdr">
+      <span class="prog-lbl">VOYAGE PROGRESS</span>
+      <span class="prog-pct"><span id="ppct">0</span>%</span>
     </div>
-    <div class="progress-track">
-      <div class="progress-fill" id="progress-fill"></div>
-    </div>
-    <div class="progress-ticks" id="progress-ticks"></div>
-    <div style="display:flex;justify-content:space-between;margin-top:24px;">
-      <span style="font-size:11px;font-family:var(--mono);color:var(--muted)" id="origin-label"></span>
-      <span style="font-size:11px;font-family:var(--mono);color:var(--muted)" id="dest-label"></span>
+    <div class="prog-track"><div class="prog-fill" id="pfill"></div></div>
+    <div class="prog-ticks" id="pticks"></div>
+    <div style="display:flex;justify-content:space-between;margin-top:24px">
+      <span style="font-size:11px;font-family:var(--mono);color:var(--muted)" id="olbl"></span>
+      <span style="font-size:11px;font-family:var(--mono);color:var(--muted)" id="dlbl"></span>
     </div>
   </div>
 
-  <!-- STATS GRID -->
-  <div class="stats-grid">
-    <div class="stat-card highlight">
-      <div class="stat-label">SPEED OVER GROUND</div>
-      <div class="stat-value" id="stat-sog">—</div>
-      <div class="stat-unit">knots</div>
-    </div>
-    <div class="stat-card">
-      <div class="stat-label">COURSE OVER GROUND</div>
-      <div class="stat-value" id="stat-cog">—</div>
-      <div class="stat-unit">degrees true</div>
-    </div>
-    <div class="stat-card highlight">
-      <div class="stat-label">TODAY'S RUN</div>
-      <div class="stat-value" id="stat-today">—</div>
-      <div class="stat-unit">nautical miles</div>
-    </div>
-    <div class="stat-card">
-      <div class="stat-label">TOTAL MILES SAILED</div>
-      <div class="stat-value" id="stat-total">—</div>
-      <div class="stat-unit">nautical miles</div>
-    </div>
-    <div class="stat-card">
-      <div class="stat-label">NEXT WAYPOINT</div>
-      <div class="stat-value" id="stat-next-nm">—</div>
-      <div class="stat-unit" id="stat-next-name">nm to next stop</div>
-    </div>
-    <div class="stat-card">
-      <div class="stat-label">DAYS AT SEA</div>
-      <div class="stat-value" id="stat-days">—</div>
-      <div class="stat-unit">elapsed</div>
-    </div>
-    <div class="stat-card">
-      <div class="stat-label">ALTITUDE / ELEVATION</div>
-      <div class="stat-value" id="stat-alt">—</div>
-      <div class="stat-unit">meters MSL</div>
-    </div>
-    <div class="stat-card highlight">
-      <div class="stat-label">TRUE WIND ANGLE</div>
-      <div class="stat-value" id="stat-twa">—</div>
-      <div class="stat-unit">degrees · <span id="stat-twa-label" style="font-style:italic">—</span></div>
-    </div>
+  <!-- stats -->
+  <div class="sgrid">
+    <div class="scard hi"><div class="slbl">SPEED OVER GROUND</div><div class="sval" id="s-sog">—</div><div class="sunit">knots</div></div>
+    <div class="scard">   <div class="slbl">COURSE OVER GROUND</div><div class="sval" id="s-cog">—</div><div class="sunit">degrees true</div></div>
+    <div class="scard hi"><div class="slbl">TODAY'S RUN</div><div class="sval" id="s-today">—</div><div class="sunit">nautical miles</div></div>
+    <div class="scard">   <div class="slbl">TOTAL MILES SAILED</div><div class="sval" id="s-total">—</div><div class="sunit">nautical miles</div></div>
+    <div class="scard">   <div class="slbl">NEXT WAYPOINT</div><div class="sval" id="s-nnm">—</div><div class="sunit" id="s-nname">nm to next stop</div></div>
+    <div class="scard">   <div class="slbl">DAYS AT SEA</div><div class="sval" id="s-days">—</div><div class="sunit">elapsed</div></div>
+    <div class="scard">   <div class="slbl">ELEVATION</div><div class="sval" id="s-elev">—</div><div class="sunit">metres MSL</div></div>
+    <div class="scard hi"><div class="slbl">TRUE WIND ANGLE</div><div class="sval" id="s-twa">—</div><div class="sunit">° · <span id="s-twalbl" style="font-style:italic">—</span></div></div>
   </div>
 
-  <!-- MAP + SIDEBAR -->
-  <div class="main-content">
-
-    <!-- MAP -->
-    <div class="map-container">
-      <div class="map-overlay-label">LIVE WEATHER & POSITION</div>
-      <iframe id="windy-embed" allowfullscreen></iframe>
-      <div class="map-no-gps" id="map-no-gps">
-        <div class="icon">⚓</div>
-        <h3>Awaiting Position</h3>
-        <p>Configure <code>mapShareUrl</code> in CONFIG to display the live Windy + vessel overlay once MapShare is active.</p>
+  <!-- map + sidebar -->
+  <div class="main">
+    <div class="mwrap">
+      <div class="mlabel">LIVE WEATHER &amp; POSITION</div>
+      <iframe id="windy" allowfullscreen></iframe>
+      <div class="moverlay" id="moverlay">
+        <div class="ico">⚓</div>
+        <h3 id="ov-title">Connecting to LiveTrack</h3>
+        <p id="ov-msg">Fetching position from Garmin…</p>
       </div>
     </div>
 
-    <!-- SIDEBAR -->
     <div class="sidebar">
 
-      <!-- Position & heading -->
       <div class="card">
-        <div class="card-title">▸ POSITION & HEADING</div>
-        <div class="pos-grid">
-          <div class="pos-row">
-            <div class="pos-key">LATITUDE</div>
-            <div class="pos-val" id="pos-lat">—</div>
+        <div class="ctitle">▸ POSITION &amp; HEADING</div>
+        <div class="prows">
+          <div class="prow"><span class="pk">LAT</span><span class="pv" id="p-lat">—</span></div>
+          <div class="prow"><span class="pk">LON</span><span class="pv" id="p-lon">—</span></div>
+          <div class="prow"><span class="pk">LAST FIX</span><span class="pv" style="font-size:11px" id="p-time">—</span></div>
+        </div>
+        <div class="cmpwrap">
+          <div class="cmp">
+            <div class="cneedle" id="cneedle"></div>
+            <div class="ccenter"></div>
           </div>
-          <div class="pos-row">
-            <div class="pos-key">LONGITUDE</div>
-            <div class="pos-val" id="pos-lon">—</div>
+          <div class="clabels">
+            <div><div class="ck">COG</div><div class="cv" id="c-cog">—°</div></div>
+            <div><div class="ck">SOG</div><div class="cv" id="c-sog">— kts</div></div>
           </div>
         </div>
-        <div class="compass-wrap" style="margin-top:14px;">
-          <div class="compass">
-            <div class="compass-needle" id="compass-needle"></div>
-            <div class="compass-center"></div>
-          </div>
-          <div class="compass-labels">
-            <div>
-              <div class="cog-label">COG</div>
-              <div class="cog-val" id="cog-val">—°</div>
-            </div>
-            <div>
-              <div class="cog-label">SOG</div>
-              <div class="cog-val" id="sog-val">— kts</div>
-            </div>
-            <div style="grid-column:1/-1">
-              <div class="cog-label">LAST FIX</div>
-              <div class="cog-val" id="last-fix" style="font-size:11px;">—</div>
-            </div>
-          </div>
-        </div>
+        <div class="sessstrip" id="sessstrip"></div>
       </div>
 
-      <!-- Weather at vessel -->
       <div class="card">
-        <div class="card-title">▸ WEATHER AT VESSEL (OPEN-METEO)</div>
-        <div id="weather-loading" style="font-size:12px;font-family:var(--mono);color:var(--muted)">Waiting for position fix…</div>
-        <div id="weather-content" style="display:none">
-          <div class="weather-row">
-            <div class="weather-item">
-              <div class="wlabel">WIND SPEED</div>
-              <div class="wval"><span id="w-windspd">—</span><span class="wunit">kts</span></div>
-            </div>
-            <div class="weather-item">
-              <div class="wlabel">WIND DIR</div>
-              <div class="wval"><span id="w-winddir">—</span><span class="wunit">°T</span></div>
-            </div>
-            <div class="weather-item">
-              <div class="wlabel">WAVE HEIGHT</div>
-              <div class="wval"><span id="w-wave">—</span><span class="wunit">m</span></div>
-            </div>
-            <div class="weather-item">
-              <div class="wlabel">SWELL PERIOD</div>
-              <div class="wval"><span id="w-swell">—</span><span class="wunit">s</span></div>
-            </div>
+        <div class="ctitle">▸ WEATHER AT VESSEL</div>
+        <div id="wxload" style="font-size:12px;font-family:var(--mono);color:var(--muted)">Waiting for position…</div>
+        <div id="wxcont" style="display:none">
+          <div class="wxgrid">
+            <div><div class="wxlbl">WIND SPEED</div><div class="wxval"><span id="wx-ws">—</span><span class="wxunit">kts</span></div></div>
+            <div><div class="wxlbl">WIND DIR</div><div class="wxval"><span id="wx-wd">—</span><span class="wxunit">°T</span></div></div>
+            <div><div class="wxlbl">WAVE HEIGHT</div><div class="wxval"><span id="wx-wv">—</span><span class="wxunit">m</span></div></div>
+            <div><div class="wxlbl">SWELL PERIOD</div><div class="wxval"><span id="wx-sw">—</span><span class="wxunit">s</span></div></div>
           </div>
-          <div class="wind-direction-display">
-            <div class="wind-arrow-wrap">
-              <div class="wind-arrow" id="wind-arrow"></div>
-            </div>
+          <div class="wrow">
+            <div class="wcircle"><div class="warrow" id="warrow"></div></div>
             <div>
               <div style="font-size:12px;color:var(--textD);font-family:var(--mono)">TRUE WIND ANGLE</div>
-              <div style="font-size:20px;font-weight:800;color:var(--accent)" id="twa-val">—°</div>
-              <div class="twa-badge twa-reach" id="twa-badge">—</div>
+              <div style="font-size:20px;font-weight:800;color:var(--accent)" id="wx-twa">—°</div>
+              <div class="twabadge re" id="twabadge">—</div>
             </div>
           </div>
         </div>
       </div>
 
-      <!-- Waypoints -->
       <div class="card">
-        <div class="card-title">▸ WAYPOINTS</div>
-        <div class="waypoint-list" id="waypoint-list"></div>
+        <div class="ctitle">▸ WAYPOINTS</div>
+        <div class="wplist" id="wplist"></div>
       </div>
 
     </div>
   </div>
 
   <footer>
-    <div class="f-label">Data: Garmin inReach MapShare · Open-Meteo Marine · Windy</div>
-    <div id="last-updated">Last updated: —</div>
+    <div class="flbl">Garmin LiveTrack · Open-Meteo Marine · Windy</div>
+    <div class="flbl" id="lupd">—</div>
   </footer>
 
 </div>
 
 <script>
-// ============================================================
-//  STATE
-// ============================================================
-const state = {
-  position: null,   // { lat, lon, sog, cog, alt, timestamp }
-  weather:  null,   // open-meteo response
-  trackPoints: [],  // array of past {lat,lon,timestamp}
-  dailyStartPoint: null,
-};
+// ── STATE
+const S = { sessionId:null, token:null, position:null, trackPoints:[] };
 
-// ============================================================
-//  INIT
-// ============================================================
+// ── BOOT
 window.addEventListener('DOMContentLoaded', () => {
-  initUI();
-  loadDemoMode();   // remove when MapShare is live
-  if (CONFIG.mapShareUrl) {
-    fetchInReach();
-    setInterval(fetchInReach, CONFIG.refreshInterval);
+  document.getElementById('vname').textContent = CONFIG.vesselName;
+  document.getElementById('rlbl').textContent  = CONFIG.originName + '  →  ' + CONFIG.destinationName;
+  document.getElementById('olbl').textContent  = CONFIG.originName;
+  document.getElementById('dlbl').textContent  = CONFIG.destinationName;
+
+  const days = Math.floor((Date.now() - new Date(CONFIG.tripStartDate)) / 86400000);
+  document.getElementById('s-days').textContent = days >= 0 ? days : '—';
+
+  renderWP(null);
+  renderTicks(0);
+
+  // Try saved URL first, then config URL
+  const saved = localStorage.getItem('lt_url');
+  if (saved && parseUrl(saved)) {
+    // use saved
+  } else if (CONFIG.liveTrackUrl) {
+    parseUrl(CONFIG.liveTrackUrl);
+  }
+
+  if (S.sessionId) {
+    poll();
+    setInterval(poll, CONFIG.refreshInterval);
+  } else {
+    showBanner();
+    setOverlay('No LiveTrack URL', 'Paste a LiveTrack URL in the banner above.');
   }
 });
 
-function initUI() {
-  document.getElementById('vessel-name-display').textContent = CONFIG.vesselName;
-  document.getElementById('route-label').textContent =
-    CONFIG.originName + '  →  ' + CONFIG.destinationName;
-  document.getElementById('origin-label').textContent = CONFIG.originName;
-  document.getElementById('dest-label').textContent   = CONFIG.destinationName;
-
-  const start = new Date(CONFIG.tripStartDate);
-  const now   = new Date();
-  const days  = Math.floor((now - start) / 86400000);
-  document.getElementById('stat-days').textContent = days >= 0 ? days : '—';
-
-  renderWaypoints(null);
-  renderProgressBar(0);
+// ── URL PARSE
+function parseUrl(url) {
+  const m = url.match(/session\/([^/]+)\/token\/([^/?&#]+)/);
+  if (m) { S.sessionId = m[1]; S.token = m[2]; localStorage.setItem('lt_url', url); return true; }
+  return false;
 }
 
-// ============================================================
-//  DEMO MODE — remove this block when MapShare is live
-// ============================================================
-function loadDemoMode() {
-  // Simulate a position mid-Caribbean for visual demo
-  if (CONFIG.mapShareUrl) return;  // skip if real URL provided
-  const demoPos = {
-    lat: 17.92, lon: -83.45,
-    sog: 6.3, cog: 28, alt: 1,
-    timestamp: new Date().toISOString()
-  };
-  applyPosition(demoPos);
-  document.getElementById('status-text').textContent = 'DEMO MODE';
-  document.getElementById('map-no-gps').querySelector('p').textContent =
-    'Demo position shown. Add your MapShare URL to CONFIG to go live.';
+function applyNewUrl() {
+  const v = document.getElementById('lt-inp').value.trim();
+  if (parseUrl(v)) {
+    document.getElementById('lt-banner').classList.remove('on');
+    document.getElementById('lt-inp').value = '';
+    poll();
+  } else {
+    const inp = document.getElementById('lt-inp');
+    inp.style.borderColor = '#e84b4b';
+    setTimeout(() => inp.style.borderColor = '', 1500);
+  }
 }
 
-// ============================================================
-//  GARMIN INREACH MAPSHARE FETCH
-// ============================================================
-async function fetchInReach() {
-  if (!CONFIG.mapShareUrl) return;
+// ── MAIN POLL
+async function poll() {
+  if (!S.sessionId) { showBanner(); return; }
+  const base = 'https://livetrack.garmin.com/services';
+  const now  = Date.now();
+
   try {
-    // MapShare returns KML — parse it
-    const res  = await fetch(CONFIG.mapShareUrl);
-    const text = await res.text();
-    const parser = new DOMParser();
-    const kml  = parser.parseFromString(text, 'application/xml');
+    // Session status
+    const sRes = await fetch(`${base}/session/${S.sessionId}/token/${S.token}?requestTime=${now}`);
+    if (!sRes.ok) throw new Error('sess_err');
+    const sess = await sRes.json();
 
-    const placemarks = kml.querySelectorAll('Placemark');
-    if (!placemarks.length) throw new Error('No placemarks');
+    if (sess.sessionStatus === 'Expired' || sess.cancelled) {
+      setDot('exp'); setStat('SESSION EXPIRED');
+      showBanner();
+      setOverlay('Session Expired', 'Ask the crew to restart LiveTrack and send you the new link.');
+      return;
+    }
 
-    // Most recent placemark is first
-    const pm   = placemarks[0];
-    const coords = pm.querySelector('coordinates')?.textContent?.trim().split(',');
-    const extData = {};
-    pm.querySelectorAll('Data').forEach(d => {
-      extData[d.getAttribute('name')] = d.querySelector('value')?.textContent;
-    });
+    // Track log — last 24 hrs
+    const logRes = await fetch(`${base}/trackLog/${S.sessionId}/token/${S.token}?requestTime=${now}&from=${now-86400000}`);
+    if (!logRes.ok) throw new Error('log_err');
+    const log = await logRes.json();
 
+    if (!Array.isArray(log) || !log.length) {
+      setDot('off'); setStat('NO POINTS YET');
+      setOverlay('Session Active', 'Waiting for first position fix from device.');
+      return;
+    }
+
+    // Merge new points
+    const existing = new Set(S.trackPoints.map(p => p.timestamp));
+    log.forEach(p => { if (!existing.has(p.timestamp) && p.latitude && p.longitude) S.trackPoints.push(p); });
+    S.trackPoints.sort((a,b) => a.timestamp - b.timestamp);
+
+    const latest = S.trackPoints[S.trackPoints.length - 1];
+    const m = latest.metaData || {};
     const pos = {
-      lat: parseFloat(coords[1]),
-      lon: parseFloat(coords[0]),
-      alt: parseFloat(coords[2] || 0),
-      sog: parseFloat(extData['Velocity'] || extData['Speed'] || 0) * 0.539957, // km/h → knots
-      cog: parseFloat(extData['Course'] || extData['Heading'] || 0),
-      timestamp: extData['Time'] || new Date().toISOString(),
+      lat: latest.latitude,
+      lon: latest.longitude,
+      sog: mpsKn(parseFloat(m.SPEED || 0)),
+      cog: parseFloat(m.HEADING || m.COURSE || 0),
+      alt: parseFloat(m.ELEVATION || 0),
+      ts:  latest.timestamp,
     };
 
-    applyPosition(pos);
+    applyPos(pos, sess);
+    setDot('live'); setStat('LIVE');
+    hideBanner();
+    document.getElementById('lupd').textContent = 'Updated ' + new Date().toLocaleTimeString();
+
   } catch(e) {
-    console.warn('inReach fetch error:', e);
-    document.getElementById('status-text').textContent = 'Fetch error';
+    console.warn('LiveTrack poll:', e.message);
+    setDot('off'); setStat('FETCH ERROR');
   }
 }
 
-// ============================================================
-//  APPLY NEW POSITION
-// ============================================================
-function applyPosition(pos) {
-  state.position = pos;
-  state.trackPoints.push(pos);
-
-  // Status badge
-  document.getElementById('status-dot').classList.remove('offline');
-  document.getElementById('status-text').textContent = 'LIVE';
-  document.getElementById('last-updated').textContent =
-    'Last updated: ' + new Date().toLocaleTimeString();
-
-  // Hide no-GPS overlay
-  const overlay = document.getElementById('map-no-gps');
-  if (overlay) overlay.style.display = 'none';
-
-  // Update Windy embed
+// ── APPLY POSITION
+function applyPos(pos, sess) {
+  S.position = pos;
+  document.getElementById('moverlay').style.display = 'none';
   updateWindy(pos.lat, pos.lon);
 
-  // Stats
-  document.getElementById('stat-sog').textContent = pos.sog.toFixed(1);
-  document.getElementById('stat-cog').textContent = Math.round(pos.cog) + '°';
-  document.getElementById('stat-alt').textContent = Math.round(pos.alt);
-  document.getElementById('pos-lat').textContent  = dd2dms(pos.lat, 'NS');
-  document.getElementById('pos-lon').textContent  = dd2dms(pos.lon, 'EW');
-  document.getElementById('cog-val').textContent  = Math.round(pos.cog) + '°';
-  document.getElementById('sog-val').textContent  = pos.sog.toFixed(1) + ' kts';
-  document.getElementById('last-fix').textContent = new Date(pos.timestamp).toLocaleString();
+  document.getElementById('p-lat').textContent  = dms(pos.lat, 'NS');
+  document.getElementById('p-lon').textContent  = dms(pos.lon, 'EW');
+  document.getElementById('p-time').textContent = new Date(pos.ts).toLocaleString();
+  document.getElementById('s-sog').textContent  = pos.sog.toFixed(1);
+  document.getElementById('s-cog').textContent  = Math.round(pos.cog) + '°';
+  document.getElementById('s-elev').textContent = Math.round(pos.alt);
+  document.getElementById('c-cog').textContent  = Math.round(pos.cog) + '°';
+  document.getElementById('c-sog').textContent  = pos.sog.toFixed(1) + ' kts';
+  document.getElementById('cneedle').style.transform = `rotate(${pos.cog}deg)`;
 
-  // Compass
-  document.getElementById('compass-needle').style.transform =
-    `rotate(${pos.cog}deg)`;
+  if (sess?.endTime) {
+    document.getElementById('sessstrip').innerHTML =
+      'Session expires: <span>' + new Date(sess.endTime).toLocaleString() + '</span>';
+  }
 
-  // Total distance
-  const totalNM = computeTotalDistance();
-  document.getElementById('stat-total').textContent = Math.round(totalNM);
+  const total = distTotal(), today = distToday();
+  document.getElementById('s-total').textContent = Math.round(total);
+  document.getElementById('s-today').textContent = Math.round(today);
 
-  // Today's run
-  const todayNM = computeTodayRun();
-  document.getElementById('stat-today').textContent = Math.round(todayNM);
+  const pct = Math.min(100, (total / CONFIG.totalTripNM) * 100);
+  document.getElementById('ppct').textContent = Math.round(pct);
+  document.getElementById('pfill').style.width = pct + '%';
+  renderTicks(pct);
+  renderWP(pos);
 
-  // Progress
-  const pct = Math.min(100, (totalNM / CONFIG.totalTripNM) * 100);
-  document.getElementById('progress-pct').textContent = Math.round(pct);
-  document.getElementById('progress-fill').style.width = pct + '%';
-
-  // Waypoints
-  renderWaypoints(pos);
-  renderProgressBar(pct);
-
-  // Weather
-  if (CONFIG.enableWeather) fetchWeather(pos.lat, pos.lon, pos.cog);
+  if (CONFIG.enableWeather) fetchWx(pos.lat, pos.lon, pos.cog);
 }
 
-// ============================================================
-//  WINDY EMBED
-// ============================================================
+// ── WINDY
 function updateWindy(lat, lon) {
-  const z   = 6;
-  const url = `https://embed.windy.com/embed2.html?lat=${lat}&lon=${lon}&detailLat=${lat}&detailLon=${lon}&width=650&height=480&zoom=${z}&level=surface&overlay=wind&product=ecmwf&menu=&message=true&marker=true&calendar=now&pressure=&type=map&location=coordinates&detail=&metricWind=kt&metricTemp=%C2%B0F&radarRange=-1`;
-  document.getElementById('windy-embed').src = url;
+  document.getElementById('windy').src =
+    `https://embed.windy.com/embed2.html?lat=${lat.toFixed(4)}&lon=${lon.toFixed(4)}`
+    + `&detailLat=${lat.toFixed(4)}&detailLon=${lon.toFixed(4)}`
+    + `&zoom=6&level=surface&overlay=wind&product=ecmwf&message=true&marker=true&metricWind=kt&metricTemp=%C2%B0F`;
 }
 
-// ============================================================
-//  OPEN-METEO MARINE WEATHER
-// ============================================================
-async function fetchWeather(lat, lon, cog) {
+// ── WEATHER
+async function fetchWx(lat, lon, cog) {
   try {
-    const url = `https://marine-api.open-meteo.com/v1/marine?latitude=${lat}&longitude=${lon}` +
-      `&hourly=wave_height,swell_wave_period&current=wave_height,swell_wave_period&wind_speed_unit=kn&timezone=auto`;
-    const windUrl = `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}` +
-      `&current=wind_speed_10m,wind_direction_10m&wind_speed_unit=kn&timezone=auto`;
+    const [mr, wr] = await Promise.all([
+      fetch(`https://marine-api.open-meteo.com/v1/marine?latitude=${lat}&longitude=${lon}&current=wave_height,swell_wave_period&timezone=auto`),
+      fetch(`https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current=wind_speed_10m,wind_direction_10m&wind_speed_unit=kn&timezone=auto`)
+    ]);
+    const mar = await mr.json(), wnd = await wr.json();
+    const ws = wnd.current?.wind_speed_10m, wd = wnd.current?.wind_direction_10m;
+    const wh = mar.current?.wave_height,    sp = mar.current?.swell_wave_period;
 
-    const [marineRes, windRes] = await Promise.all([fetch(url), fetch(windUrl)]);
-    const marine = await marineRes.json();
-    const wind   = await windRes.json();
+    document.getElementById('wx-ws').textContent  = ws != null ? ws.toFixed(1)   : '—';
+    document.getElementById('wx-wd').textContent  = wd != null ? Math.round(wd)  : '—';
+    document.getElementById('wx-wv').textContent  = wh != null ? wh.toFixed(1)   : '—';
+    document.getElementById('wx-sw').textContent  = sp != null ? Math.round(sp)  : '—';
 
-    const windSpd = wind.current?.wind_speed_10m ?? null;
-    const windDir = wind.current?.wind_direction_10m ?? null;
-    const waveH   = marine.current?.wave_height ?? null;
-    const swellP  = marine.current?.swell_wave_period ?? null;
-
-    document.getElementById('w-windspd').textContent = windSpd !== null ? windSpd.toFixed(1) : '—';
-    document.getElementById('w-winddir').textContent = windDir !== null ? Math.round(windDir) : '—';
-    document.getElementById('w-wave').textContent    = waveH   !== null ? waveH.toFixed(1)   : '—';
-    document.getElementById('w-swell').textContent   = swellP  !== null ? Math.round(swellP)  : '—';
-
-    // TWA calculation
-    if (windDir !== null) {
-      document.getElementById('wind-arrow').style.transform = `rotate(${windDir}deg)`;
-      const twa = calcTWA(cog, windDir);
-      const twaDeg = Math.round(twa);
-      document.getElementById('stat-twa').textContent = twaDeg + '°';
-      document.getElementById('twa-val').textContent  = twaDeg + '°';
-      const label = twaLabel(twa);
-      document.getElementById('stat-twa-label').textContent = label.text;
-      const badge = document.getElementById('twa-badge');
-      badge.textContent = label.text;
-      badge.className = 'twa-badge ' + label.cls;
+    if (wd != null) {
+      document.getElementById('warrow').style.transform = `rotate(${wd}deg)`;
+      const twa = calcTWA(cog, wd);
+      document.getElementById('s-twa').textContent  = Math.round(twa) + '°';
+      document.getElementById('wx-twa').textContent = Math.round(twa) + '°';
+      const lb = twaLbl(twa);
+      document.getElementById('s-twalbl').textContent = lb.t;
+      const b = document.getElementById('twabadge');
+      b.textContent = lb.t; b.className = 'twabadge ' + lb.c;
     }
-
-    document.getElementById('weather-loading').style.display = 'none';
-    document.getElementById('weather-content').style.display = 'block';
-  } catch(e) {
-    console.warn('Weather fetch error:', e);
-    document.getElementById('weather-loading').textContent = 'Weather unavailable';
-  }
+    document.getElementById('wxload').style.display = 'none';
+    document.getElementById('wxcont').style.display = 'block';
+  } catch(e) { document.getElementById('wxload').textContent = 'Weather unavailable'; }
+}
+function calcTWA(cog, wd) { let t=(wd-cog+360)%360; return t>180?360-t:t; }
+function twaLbl(t) {
+  if(t<60)  return {t:'Close-hauled',c:'up'};
+  if(t<120) return {t:'Reaching',    c:'re'};
+  return         {t:'Running',       c:'dn'};
 }
 
-function calcTWA(cog, windDir) {
-  let twa = (windDir - cog + 360) % 360;
-  if (twa > 180) twa = 360 - twa;  // return 0-180
-  return twa;
-}
-function twaLabel(twa) {
-  if (twa < 60)  return { text: 'Close-hauled (upwind)',   cls: 'twa-upwind' };
-  if (twa < 120) return { text: 'Reaching',                cls: 'twa-reach' };
-  return             { text: 'Running (downwind)',          cls: 'twa-downwind' };
-}
-
-// ============================================================
-//  DISTANCE HELPERS
-// ============================================================
-function haversineNM(lat1, lon1, lat2, lon2) {
-  const R = 3440.065; // nm
-  const dLat = (lat2 - lat1) * Math.PI / 180;
-  const dLon = (lon2 - lon1) * Math.PI / 180;
-  const a = Math.sin(dLat/2)**2 +
-    Math.cos(lat1*Math.PI/180) * Math.cos(lat2*Math.PI/180) * Math.sin(dLon/2)**2;
-  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
-}
-
-function computeTotalDistance() {
-  let d = 0;
-  for (let i = 1; i < state.trackPoints.length; i++) {
-    const a = state.trackPoints[i-1], b = state.trackPoints[i];
-    d += haversineNM(a.lat, a.lon, b.lat, b.lon);
-  }
-  return d;
-}
-
-function computeTodayRun() {
-  const now = new Date();
-  const midnightUTC = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()));
-  const todayPts = state.trackPoints.filter(p => new Date(p.timestamp) >= midnightUTC);
-  let d = 0;
-  for (let i = 1; i < todayPts.length; i++) {
-    const a = todayPts[i-1], b = todayPts[i];
-    d += haversineNM(a.lat, a.lon, b.lat, b.lon);
-  }
-  return d;
-}
-
-// ============================================================
-//  WAYPOINTS RENDER
-// ============================================================
-function renderWaypoints(pos) {
-  const list = document.getElementById('waypoint-list');
-  list.innerHTML = '';
-
-  // Determine reached / next
+// ── WAYPOINTS
+function renderWP(pos) {
   let nextIdx = -1;
   const reached = [];
-
   if (pos) {
-    for (let i = 0; i < CONFIG.waypoints.length; i++) {
-      const wp = CONFIG.waypoints[i];
-      if (wp.type === 'origin') { reached.push(i); continue; }
-      const d = haversineNM(pos.lat, pos.lon, wp.lat, wp.lon);
-      if (d < 5) { reached.push(i); }  // within 5nm = reached
-    }
-    // Next stop = first unreached non-origin
-    for (let i = 1; i < CONFIG.waypoints.length; i++) {
-      if (!reached.includes(i)) { nextIdx = i; break; }
-    }
+    CONFIG.waypoints.forEach((w,i) => {
+      if (w.type==='origin') { reached.push(i); return; }
+      if (hvNM(pos.lat,pos.lon,w.lat,w.lon) < 5) reached.push(i);
+    });
+    for (let i=1;i<CONFIG.waypoints.length;i++) if(!reached.includes(i)){nextIdx=i;break;}
   }
+  const html = CONFIG.waypoints.map((w,i) => {
+    const isR=reached.includes(i), isN=i===nextIdx, isL=i===CONFIG.waypoints.length-1;
+    const dc = w.type==='origin'?'org': w.type==='destination'?'dst': isR?'ok': isN?'nxt':'';
+    const nc = isR?'ok': isN?'nxt': pos?'dim':'';
+    let meta='';
+    if(isR&&w.type!=='origin') meta='✓ reached';
+    else if(isN&&pos){
+      const d=Math.round(hvNM(pos.lat,pos.lon,w.lat,w.lon));
+      meta=d+' nm away';
+      document.getElementById('s-nnm').textContent  = d;
+      document.getElementById('s-nname').textContent= 'nm to '+w.name.split(',')[0];
+    } else if(w.etaLabel) meta=w.etaLabel;
+    return `<div class="wpi">
+      <div class="wpdots"><div class="wpdot ${dc}"></div>${!isL?'<div class="wpline"></div>':''}</div>
+      <div><div class="wpname ${nc}">${w.name}${isN?' ←':''}</div>${meta?`<div class="wpmeta">${meta}</div>`:''}</div>
+    </div>`;
+  }).join('');
+  document.getElementById('wplist').innerHTML = html;
+}
 
-  CONFIG.waypoints.forEach((wp, i) => {
-    const isReached  = reached.includes(i);
-    const isNext     = (i === nextIdx);
-    const isOrigin   = wp.type === 'origin';
-    const isDest     = wp.type === 'destination';
-    const isLast     = (i === CONFIG.waypoints.length - 1);
-
-    let nmText = '';
-    if (pos && isNext) {
-      const d = haversineNM(pos.lat, pos.lon, wp.lat, wp.lon);
-      nmText = Math.round(d) + ' nm away';
-      document.getElementById('stat-next-nm').textContent   = Math.round(d);
-      document.getElementById('stat-next-name').textContent = 'nm to ' + wp.name.split(',')[0];
-    }
-
-    const item = document.createElement('div');
-    item.className = 'waypoint-item';
-
-    const dotCls = isOrigin ? 'origin'
-                 : isDest   ? 'destination'
-                 : isReached ? 'reached'
-                 : isNext    ? 'next-stop'
-                 : '';
-    const nameCls = isReached ? 'reached'
-                  : isNext    ? 'next-stop'
-                  : (!pos)    ? ''
-                  :             'muted';
-
-    item.innerHTML = `
-      <div class="wp-dot-col">
-        <div class="wp-dot ${dotCls}"></div>
-        ${!isLast ? '<div class="wp-line"></div>' : ''}
-      </div>
-      <div class="wp-info">
-        <div class="wp-name ${nameCls}">${wp.name}${isNext ? ' ←' : ''}</div>
-        <div class="wp-meta">
-          ${isReached && !isOrigin ? '✓ reached' : ''}
-          ${isNext ? nmText : ''}
-          ${!isReached && !isNext && wp.etaLabel ? wp.etaLabel : ''}
-        </div>
-      </div>`;
-    list.appendChild(item);
+function renderTicks(pct) {
+  const el = document.getElementById('pticks'); el.innerHTML = '';
+  const o=CONFIG.waypoints[0], d=CONFIG.waypoints[CONFIG.waypoints.length-1];
+  const td=hvNM(o.lat,o.lon,d.lat,d.lon);
+  CONFIG.waypoints.filter(w=>w.type==='stop').forEach(w=>{
+    const p=Math.min(98,(hvNM(o.lat,o.lon,w.lat,w.lon)/td)*100);
+    const t=document.createElement('div');
+    t.className='tick'+(p<=pct?' done':'');
+    t.style.left=p+'%';
+    t.textContent=w.name.split(',')[0];
+    el.appendChild(t);
   });
 }
 
-// ============================================================
-//  PROGRESS BAR TICKS
-// ============================================================
-function renderProgressBar(currentPct) {
-  const ticks = document.getElementById('progress-ticks');
-  ticks.innerHTML = '';
-
-  // Skip origin and destination for ticks (already labelled)
-  const stops = CONFIG.waypoints.filter(wp => wp.type === 'stop');
-
-  stops.forEach(wp => {
-    // Rough position as fraction of total straight-line distance
-    const origin = CONFIG.waypoints[0];
-    const dest   = CONFIG.waypoints[CONFIG.waypoints.length - 1];
-    const totalD = haversineNM(origin.lat, origin.lon, dest.lat, dest.lon);
-    const d      = haversineNM(origin.lat, origin.lon, wp.lat, wp.lon);
-    const pct    = Math.min(99, (d / totalD) * 100);
-
-    const tick = document.createElement('div');
-    tick.className = 'tick' + (pct <= currentPct ? ' reached' : '');
-    tick.style.left = pct + '%';
-    tick.textContent = wp.name.split(',')[0];
-    ticks.appendChild(tick);
-  });
+// ── UTILS
+function hvNM(la1,lo1,la2,lo2){
+  const R=3440.065,r=Math.PI/180,dLa=(la2-la1)*r,dLo=(lo2-lo1)*r;
+  const a=Math.sin(dLa/2)**2+Math.cos(la1*r)*Math.cos(la2*r)*Math.sin(dLo/2)**2;
+  return R*2*Math.atan2(Math.sqrt(a),Math.sqrt(1-a));
 }
-
-// ============================================================
-//  UTILS
-// ============================================================
-function dd2dms(dd, dirs) {
-  const neg = dd < 0;
-  dd = Math.abs(dd);
-  const deg = Math.floor(dd);
-  const min = ((dd - deg) * 60).toFixed(2);
-  return `${deg}°${min}′ ${neg ? dirs[1] : dirs[0]}`;
+function distTotal(){
+  let d=0;
+  for(let i=1;i<S.trackPoints.length;i++)
+    d+=hvNM(S.trackPoints[i-1].latitude,S.trackPoints[i-1].longitude,S.trackPoints[i].latitude,S.trackPoints[i].longitude);
+  return d;
 }
-
-function refreshAll() {
-  if (CONFIG.mapShareUrl) fetchInReach();
-  if (state.position && CONFIG.enableWeather)
-    fetchWeather(state.position.lat, state.position.lon, state.position.cog);
+function distToday(){
+  const n=new Date(), mid=Date.UTC(n.getUTCFullYear(),n.getUTCMonth(),n.getUTCDate());
+  const pts=S.trackPoints.filter(p=>p.timestamp>=mid);
+  let d=0;
+  for(let i=1;i<pts.length;i++) d+=hvNM(pts[i-1].latitude,pts[i-1].longitude,pts[i].latitude,pts[i].longitude);
+  return d;
 }
+function mpsKn(v){return v*1.94384}
+function dms(dd,dirs){
+  const n=dd<0; dd=Math.abs(dd);
+  const g=Math.floor(dd), m=((dd-g)*60).toFixed(2);
+  return `${g}°${m}′ ${n?dirs[1]:dirs[0]}`;
+}
+function setDot(t){
+  const d=document.getElementById('sdot');
+  d.className='sdot'+(t==='live'?'':t==='exp'?' exp':' off');
+}
+function setStat(t){document.getElementById('stxt').textContent=t}
+function showBanner(){document.getElementById('lt-banner').classList.add('on')}
+function hideBanner(){document.getElementById('lt-banner').classList.remove('on')}
+function setOverlay(title,msg){
+  const o=document.getElementById('moverlay');
+  o.style.display='flex';
+  document.getElementById('ov-title').textContent=title;
+  document.getElementById('ov-msg').textContent=msg;
+}
+function refreshAll(){poll()}
 </script>
 </body>
 </html>
